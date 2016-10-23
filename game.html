@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1,
+    maximum-scale=1, minimum-scale=1, user-scalable=no">
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <title>Meteors & Dinosaurs</title>
+
+    <!-- <script src="sprite.js"></script> -->
+
+    <style>
+      body {
+        background-color: rgb(175, 175, 175);
+        margin: 0 auto;
+      }
+      canvas {
+        background-color: rgb(40, 40, 40);
+        display: block;
+        position: absolute;
+        margin: auto;
+        top: 40px;
+        bottom: 0;
+        left: 0;
+        right: 0;
+      }
+      #headerBar {
+        z-index: 2;
+        background-color: rgb(175, 175, 175);
+
+        height: 40px;
+        padding: 0px;
+      }
+      #scoreDiv {
+        margin-top: 5px;;
+        height: 30px;
+        text-align: center;
+        color: rgb(50, 50, 50);
+        font-family: monospace;
+        font-size: 24px;
+        font-variant: small-caps;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+
+  <!-- Run the Javascript function, startGame(), when this element loads -->
+  <body onload="startGame()">
+    <div id="headerBar">
+      <div id="scoreDiv"></div>
+    </div>
+
+    <script>
+
+      // canvas (?)
+      var canvas;
+      // context (?)
+      var ctx;
+
+      // colors:
+      var PLAYER_COLOR = "rgb(0, 255, 255)";
+      var METEOR_COLOR = "rgb(255, 102, 102)";
+      var SCORE_COLOR = "rgb(240, 240, 240)";
+
+      // Set width and height of browser screen (no tool bars, scroll, etc.)
+      var WIDTH = window.innerWidth;
+      console.log("WIDTH: " + WIDTH);
+      var HEIGHT = window.innerHeight - 40;
+      console.log("HEIGHT: " + HEIGHT);
+
+      // objects
+      var myGamePiece;
+      var meteor;
+      var nextMeteor;
+
+      // counter variable used to add meteors (counter++ on gameUpdate)
+      var counter = 0;
+
+      // array of meteors
+      var meteorArray = [];
+
+      // collision boolean
+      var collisionOccured = false;
+
+      // score
+      var score = 0;
+      var offScreenCounter = 0;
+
+      function startGame() {
+        myGameArea.start();
+        myGamePiece = new component(50, 50, PLAYER_COLOR, WIDTH / 2, HEIGHT - 55);
+        console.log(myGamePiece);
+        //meteor = new meteor(30, 30, METEOR_COLOR, 100, 10);
+        //meteorArray.push(meteor);
+        //console.log("ARRAY LENGTH: " + meteorArray.length);
+      }
+
+      var myGameArea = {
+
+        // create a canvas element in the browser & set the context
+        canvas : document.createElement("canvas"),
+        div : document.createElement("div"),
+        start : function() {
+          this.canvas.width = WIDTH;
+          console.log("Canvas Width: " + this.canvas.width);
+          this.canvas.height = HEIGHT;
+          console.log("Canvas Height: " + this.canvas.height);
+          // change cursor style
+          //this.canvas.style.cursor = "none";
+
+          this.context = this.canvas.getContext("2d");
+
+          document.body.insertBefore(this.canvas, document.body.childNodes[0]);
+          //document.body.insertBefore(this.div, document.body.childNodes[0]);
+          this.interval = setInterval(updateGameArea, 40);
+          //keyboard commands
+          window.addEventListener('keydown', function(e) {
+            myGameArea.key = e.keyCode;
+          })
+          window.addEventListener('keyup', function (e) {
+            myGameArea.key = false;
+          })
+          // mouse movement
+          //window.addEventListener('mousemove', function (e) {
+          //  myGameArea.x = e.pageX;
+          //})
+          // touchscreen movement
+          window.addEventListener('touchmove', function (e) {
+            myGameArea.x = e.touches[0].screenX;
+          })
+        },
+        clear : function() {
+          this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        },
+        stop : function() {
+          clearInterval(this.interval);
+        }
+
+      }
+
+      // GENERAL COMPONENT
+      // change this to player later....
+      function component(height, width, color, x, y) {
+        this.width = width;
+        this.height = height;
+        this.speedX = 0;
+        this.speedY = 0;
+        this.x = x;
+        this.y = y;
+        this.update = function() {
+          ctx = myGameArea.context;
+          ctx.fillStyle = color;
+          ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
+        this.newPos = function() {
+          this.x += this.speedX;
+          this.y += this.speedY;
+        }
+
+    }
+
+      // METEOR OBJECT
+      function meteor(height, width, color, x,  y) {
+        this.width = width;
+        this.height = height;
+        this.speedX = 0;
+        this.speedY = 5;
+        this.x = x;
+        this.y = y;
+        this.update = function() {
+          ctx = myGameArea.context;
+          ctx.fillStyle = color;
+          ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
+        this.newPos = function() {
+          this.y += this.speedY;
+        }
+        this.collide = function(playerX, playerY, playerHeight, playerWidth) {
+          var collision = false;
+          // this collision detection is trash...
+          if (this.y + this.height >= playerY && this.y <= playerY + playerHeight) {
+            if (this.x >= playerX && this.x + this.width <= playerX + playerWidth) {
+              collision = true;
+            }
+          }
+          if (this.y + this.height >= playerY && this.y <= playerY + playerHeight) {
+            if (this.x <= playerX + playerWidth && this.x + this.width >= playerX) {
+              collision = true;
+            }
+          }
+          else {
+            collision = false;
+          }
+        return collision;
+      }
+      }
+
+      // POWER UP OBJECT
+      // type: integer between 0,n.
+      // 0 = remove all meteors
+      function powerUp(type, height, width, color, x, y) {
+        this.width = width;
+        this.height = height;
+        this.speedX = 0;
+        this.speedY = 15;
+        this.x = x;
+        this.y = y;
+        this.update = function() {
+          ctx = myGameArea.context;
+          ctx.fillStyle = color;
+          ctx.fillRect(this.x, this.y, this.width, this.height);
+        }
+        this.newPos = function() {
+          this.y += this.speedY;
+        }
+        this.collide = function(playerX, playerY, playerHeight, playerWidth) {
+          var collision = false;
+          if (this.y + this.height >= playerY && this.y <= playerY + playerHeight) {
+            if (this.x >= playerX && this.x + this.width <= playerX + playerWidth) {
+              collision = true;
+            }
+          }
+          if (this.y + this.height >= playerY && this.y <= playerY + playerHeight) {
+            if (this.x <= playerX + playerWidth && this.x + this.width >= playerX) {
+              collision = true;
+            }
+          }
+          else {
+            collision = false;
+          }
+          return collision;
+        }
+      }
+
+      function updateScore() {
+        document.getElementById('scoreDiv').innerHTML = score;
+      }
+
+      function updateGameArea() {
+        //console.log("REFRESH");
+        console.log("Collision: " + collisionOccured);
+        counter++;
+        //console.log("Counter: " + counter);
+        if (counter % 2 == 0) {
+          myGameArea.clear();
+        }
+        // console.log("ARRAY LENGTH: " + meteorArray.length);
+        // if (collisionOccured) {
+        //   myGameArea.stop();
+        //   console.log("COLLISION DETECTED.");
+        // } else {
+          //myGameArea.clear();
+          myGamePiece.speedX = 0;
+          myGamePiece.speedY = 0;
+          // keyboard movement
+          if (myGameArea.key && myGameArea.key == 37) {myGamePiece.speedX = -4; }
+          if (myGameArea.key && myGameArea.key == 39) {myGamePiece.speedX = 4; }
+          // mouse movement
+          //if (myGameArea.x) {
+          //  myGamePiece.x = myGameArea.x;
+          //}
+          // touch movement
+          if (myGameArea.touchX) {
+            myGamePiece.x = myGameArea.x;
+          }
+
+          if (counter % 10 == 0) {
+            nextMeteor = new meteor(30, 30, METEOR_COLOR,
+                                    Math.floor((Math.random() * WIDTH) + 1), 0);
+            meteorArray.push(nextMeteor);
+
+
+          }
+          if (counter % 2 == 0) {
+            for (var i = 0, len = meteorArray.length; i < len; i++) {
+
+              if (meteorArray[i].collide(myGamePiece.x, myGamePiece.y, myGamePiece.height, myGamePiece.width)) {
+                myGameArea.stop();
+                console.log("COLLISION DETECTED");
+              }
+              else if (meteorArray[i].y > HEIGHT) {
+                console.log("OFF SCREEN");
+                score += 100;
+                console.log("SCORE: " + score);
+                offScreenCounter++;
+                console.log("OFFSCREEN COUNTER: " + offScreenCounter);
+                console.log("----------------------------------------");
+              }
+              else {
+                updateScore();
+
+                meteorArray[i].newPos();
+                meteorArray[i].update();
+              }
+            }
+          }
+
+          console.log("ARRAY LENGTH: " + meteorArray.length);
+
+          if (meteorArray.length > 50) {
+            //console.log("ARRAY LENGTH: " + meteorArray.length);
+            console.log("Array > 50.");
+            meteorArray.shift();
+          }
+
+          myGamePiece.newPos();
+          myGamePiece.update();
+
+      }
+
+      function moveLeft() {
+        myGamePiece.speedX -= 1;
+      }
+
+      function moveRight() {
+        myGamePiece.speedX += 1;
+      }
+
+
+    </script>
+
+  </body>
+</html>
